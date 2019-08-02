@@ -45,6 +45,18 @@ class DatasetView(SuperUserMixin, LoginRequiredMixin, ListView):
         return project.documents.all()
 
 
+class AnnotatorsView(SuperUserMixin, LoginRequiredMixin, ListView):
+    template_name = 'annotators.html'
+    paginate_by = 5
+    extra_context = {
+        'bundle_name': 'annotators'
+    }
+
+    def get_queryset(self):
+        project = get_object_or_404(Project, pk=self.kwargs['project_id'])
+        return project.users.all()
+
+
 class LabelView(SuperUserMixin, LoginRequiredMixin, TemplateView):
     template_name = 'admin.html'
     extra_context = {

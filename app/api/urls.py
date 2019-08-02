@@ -8,6 +8,7 @@ from .views import DocumentList, DocumentDetail
 from .views import AnnotationList, AnnotationDetail
 from .views import TextUploadAPI, TextDownloadAPI, CloudUploadAPI
 from .views import StatisticsAPI
+from .views import AnnotatorsList, AnnotatorsDetail
 
 
 urlpatterns = [
@@ -35,7 +36,14 @@ urlpatterns = [
     path('projects/<int:project_id>/docs/upload',
          TextUploadAPI.as_view(), name='doc_uploader'),
     path('projects/<int:project_id>/docs/download',
-         TextDownloadAPI.as_view(), name='doc_downloader')
+         TextDownloadAPI.as_view(), name='doc_downloader'),
+    path('projects/<int:project_id>/annotators',
+         AnnotatorsList.as_view(), name='annotators_list'),
+    path('projects/<int:project_id>/annotators/<int:annotator_id>',
+         AnnotatorsDetail.as_view(), name='annotators_detail')
+#     endpoint to add a user to a project
+#     projects/<int:project_id>/user/<str:email>
+#     returns name of annotator
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns, allowed=['json', 'xml'])

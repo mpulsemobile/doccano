@@ -13,7 +13,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework_csv.renderers import CSVRenderer
 
 from .filters import DocumentFilter
-from .models import Project, Label, Document
+from .models import Project, Label, Document, User
 from .permissions import IsAdminUserAndWriteOnly, IsProjectUser, IsOwnAnnotation
 from .serializers import ProjectSerializer, LabelSerializer, DocumentSerializer, UserSerializer
 from .serializers import ProjectPolymorphicSerializer
@@ -114,9 +114,48 @@ class LabelList(generics.ListCreateAPIView):
 
 class LabelDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Label.objects.all()
-    serializer_class = LabelSerializer
-    lookup_url_kwarg = 'label_id'
+    serializer_class = UserSerializer
+    lookup_url_kwarg = 'annotator_id'
     permission_classes = (IsAuthenticated, IsProjectUser, IsAdminUserAndWriteOnly)
+
+
+class AnnotatorsList(generics.ListCreateAPIView):
+    serializer_class = ProjectSerializer
+    pagination_class = None
+    permission_classes = (IsAuthenticated, IsProjectUser, IsAdminUserAndWriteOnly)
+
+    def get_queryset(self):
+        project = get_object_or_404(Project, pk=self.kwargs['project_id'])
+        return project.users
+
+    def perform_create(self, serializer):
+        project = get_object_or_404(Project, pk=self.kwargs['project_id'])
+        serializer.save(project=project)
+
+
+# basic functionality for adding and removing a user to a project
+#  a better system would be having a ProjectUser model where a user has a specific
+#  role for each project
+class AnnotatorsDetail(APIView):
+    pagination_class = None
+    permission_classes = (IsAuthenticated, IsProjectUser, IsAdminUserAndWriteOnly)
+
+    def post(self, request, format=None, **kwargs):
+        project = get_object_or_404(Project, pk=self.kwargs['project_id'])
+        if 'email' in request.data.keys() and User.objects.filter(email=request.data['email']).exists():
+            project.users.add(User.objects.filter(email=request.data['email'])[0])
+            return Response(status=status.HTTP_201_CREATED)
+        elif self.kwargs['annotator_id'] != 1:
+            project.users.add(User.objects.get(id=self.kwargs['annotator_id']))
+            return Response(status=status.HTTP_201_CREATED)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, *args, **kwargs):
+        if request.user.id == self.kwargs['annotator_id']:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        project = get_object_or_404(Project, pk=self.kwargs['project_id'])
+        project.users.remove(User.objects.get(id=self.kwargs['annotator_id']))
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class DocumentList(generics.ListCreateAPIView):
